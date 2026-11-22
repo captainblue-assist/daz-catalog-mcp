@@ -78,7 +78,7 @@ The LLM JSON is inconsistent in shape, so the importer must be tolerant:
 - **thumbnail_path** = `<thumbnail_dir>/<filename>` (dir is a config value, §8).
 
 ### 3.2 Controlled category vocabulary
-Normalized to one of: `Character`, `Animal`, `Environment`, `Props`, `Clothes`, `Hair`, `Poses`, `Vehicles`, `Accessories`, `Anatomy`, `Materials`, `FX`, `Utilities`, `Other`.
+Normalized to one of: `Character`, `Animal`, `Environment`, `Props`, `Clothes`, `Hair`, `Poses`, `Vehicles`, `Accessories`, `Anatomy`, `Materials`, `FX`, `Utilities`, `Bundle/Collection`, `Other`. (`Bundle/Collection` was added during Phase 1 — ~600 products carry it in the raw data and it is a useful filter for scene building.)
 
 Alias map (examples): `"Clothes (Apparel/Armor)" → Clothes`; `"Environment (Full Scenes/Dioramas)" → Environment`; `"Props (Objects/Weapons/Furniture)" → Props`; `"Poses (Action/Static poses)" → Poses`; `"Materials (Textures/Shaders/HDRI)" → Materials`. Unknown values are kept verbatim but flagged.
 
