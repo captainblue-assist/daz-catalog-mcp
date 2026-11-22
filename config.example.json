@@ -1,0 +1,18 @@
+{
+  "sources": [
+    "/absolute/path/to/master_index.md",
+    "/absolute/path/to/master_index-new.md"
+  ],
+  "thumbnail_dir": "/absolute/path/to/Product-Thumbnails",
+  "db_path": "catalog.db",
+  "field_weights": {
+    "product_name": 3.0,
+    "search_keywords": 3.0,
+    "classification": 2.0,
+    "visual_summary": 1.5,
+    "attributes_text": 1.0,
+    "description": 0.5
+  },
+  "default_limit": 20,
+  "max_limit": 50
+}

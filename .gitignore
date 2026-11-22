@@ -1,0 +1,19 @@
+# Generated database (content data - never commit)
+*.db
+catalog.db
+
+# Local config with machine-specific paths (commit config.example.json instead)
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

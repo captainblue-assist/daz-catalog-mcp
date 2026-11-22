@@ -1,0 +1,9 @@
+# daz-catalog-mcp dependencies
+
+# Phase 1 (importer) + Phase 3 (re-scrape integration)
+requests>=2.31
+beautifulsoup4>=4.12
+openai>=1.0            # OpenAI-compatible client for LM Studio / local vision models
+
+# Phase 2 (MCP server) - finalize exact package/version when the server is built
+mcp>=1.0               # Model Context Protocol Python SDK
