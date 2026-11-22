@@ -31,7 +31,7 @@ A queryable database of your DAZ / Renderotica 3D content, exposed to an LLM via
  master_index-new.md    ─┴─► importer (parse +      │  items           get_item()
                             normalize + upsert)     │  (+ indexes)     list_categories()
                                                     │                  stats()
-[future] scraper_app re-scrape ────────────────────┘   (upsert, idempotent)
+[DAZ/Renderotica web + vision LLM] ─► scraper.py ────────────────────┘   (same upsert path; records metadata_model)
 ```
 
 - **Importer** parses the markdown blocks, normalizes the inconsistent LLM JSON, and upserts into SQLite. Idempotent — safe to re-run.
@@ -70,7 +70,7 @@ A queryable database of your DAZ / Renderotica 3D content, exposed to an LLM via
 ### 3.1 Normalization rules (importer)
 The LLM JSON is inconsistent in shape, so the importer must be tolerant:
 - Strip markdown code fences; parse the `### Metadata & Attributes` block as JSON (fall back to best-effort if malformed).
-- **classification** = top-level `"Classification"`, mapped through the alias table (§3.2).
+- **classification** = top-level `"Classification"`; some vision models (e.g. Qwen) emit it under `"Category"` instead, which is accepted as an alias for `"Classification"`. Both keys are excluded from the attribute sweep so they aren't duplicated into attributes. The value is mapped through the alias table (§3.2).
 - **visual_summary** = `"Visual_Summary"`.
 - **search_keywords** = `"Search_Keywords"` → always normalize to a Python list (split comma-strings; keep lists as-is) → store as JSON array.
 - **attributes**: merge *all* of these into one flat dict: top-level attribute keys, the nested `"Attributes"` object, and bundle info (`"Bundle_Info"` / top-level `"Contains"` / `"Theme"` / `"Primary Use"`). Store merged result in `attributes_json`; flatten every value (expanding lists) into `attributes_text`.
@@ -200,6 +200,8 @@ Daz Context DB/
 }
 ```
 
+> **`thumbnail_dir`:** must point at a folder where each product's thumbnail sits directly under it, named by its catalog filename (e.g. `DAZ_3D_55815_The_Monster_Bride_HD....jpg`) — both the importer and scraper do a flat `<dir>/<filename>` lookup. In a DAZ 3D install these thumbnails live under your **`My DAZ 3D Library/Runtime/Support`** folder (nested by vendor/product), so you typically point at a flattened copy rather than that tree directly. On this server the flattened set is `C:/Users/Adam/Documents/AnythingLLM/Daz3d/Product-Thumbnails`; the live originals are under `C:\Users\Public\Documents\My DAZ 3D Library\Runtime\Support`.
+
 ---
 
 ## 9. Development phases
@@ -215,8 +217,8 @@ Build `import_catalog.py`: parse both markdown files, normalize, upsert into `ca
 Build `mcp_server.py` exposing `search`, `get_item`, `list_categories`, `stats`; register with LM Studio Bionic.
 - Done when: end-to-end "ask the LLM for a scene" works in a session.
 
-**Phase 3 — Re-scrape integration.**
-Modify `scraper_app` to **upsert into the DB** (idempotent, keyed on filename) instead of appending markdown; record `metadata_model`; support re-running with a better vision model (e.g. qwen3-27b) without duplicating rows or losing data.
+**Phase 3 — Re-scrape integration (done).**
+`scraper.py` scrapes each product's vendor page (description + gallery images) and asks a local **vision LLM** (any OpenAI-compatible server, e.g. LM Studio at `http://localhost:1234/v1`) to classify and describe it, then **upserts into the DB** — idempotent, keyed on filename — instead of appending markdown. It records which model wrote each row (`metadata_model`), so you can re-run with a better vision model (e.g. qwen3-27b) without duplicating rows or losing data. All normalization/upsert logic is reused from `import_catalog.py` (including the `"Category"`/`"Classification"` alias). Modes: default *incremental* (skip filenames already in the DB), `--force` (reprocess all), `--only FILE…`, `--retry-log PATH`, `--limit N`; progress commits per item so an interrupted run resumes cleanly.
 
 **Later / optional.**
 Strict-AND search tool · semantic/embedding fallback when results are empty · attribute filters (era, gender…) · additional vendors · legacy index links · thumbnail display in UI.

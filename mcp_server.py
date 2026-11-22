@@ -98,6 +98,9 @@ def _detail(row):
         "attributes": attrs,
         "thumbnail_path": row["thumbnail_path"],
         "product_url": row["product_url"],
+        # Provenance: where the record came from and which model wrote it.
+        "source_file": row["source_file"],
+        "metadata_model": row["metadata_model"],
     }
 
 
@@ -162,7 +165,8 @@ def get_item(
     Returns:
         {id, product_name, filename, vendor, sku, classification, description,
         visual_summary, search_keywords (array), attributes (object),
-        thumbnail_path (local image path), product_url}
+        thumbnail_path (local image path), product_url,
+        source_file, metadata_model}
     """
     if sum(x is not None for x in (id, sku, filename)) != 1:
         return {

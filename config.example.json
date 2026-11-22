@@ -3,7 +3,7 @@
     "/absolute/path/to/master_index.md",
     "/absolute/path/to/master_index-new.md"
   ],
-  "thumbnail_dir": "/absolute/path/to/Product-Thumbnails",
+  "thumbnail_dir": "/absolute/path/to/thumbnails",
   "db_path": "catalog.db",
   "field_weights": {
     "product_name": 3.0,
@@ -14,5 +14,7 @@
     "description": 0.5
   },
   "default_limit": 20,
-  "max_limit": 50
+  "max_limit": 50,
+  "lm_studio_url": "http://localhost:1234/v1",
+  "model_name": ""
 }
