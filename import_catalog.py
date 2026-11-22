@@ -101,8 +101,11 @@ def load_config(path="config.json"):
 # Markdown parsing + normalization
 # --------------------------------------------------------------------------- #
 
-def _extract_json(text):
-    """Find and parse the first {...} JSON object in text (tolerant)."""
+def extract_json(text):
+    """Find and parse the first {...} JSON object in text (tolerant).
+
+    Shared with scraper.py, which parses raw LLM output the same way.
+    """
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
@@ -192,7 +195,7 @@ def parse_block(block):
     # Metadata JSON: after the '### Metadata & Attributes' header.
     meta = None
     if mm:
-        meta = _extract_json(block[mm.end():])
+        meta = extract_json(block[mm.end():])
 
     return {
         "product_name": product_name,
@@ -220,14 +223,18 @@ def parse_markdown(path):
 
 def normalize_item(parsed, source_file, thumbnail_dir):
     meta = parsed.get("meta") or {}
-    classification = normalize_category(meta.get("Classification"))
+    # The top-level category is usually emitted as "Classification", but some
+    # vision models (e.g. Qwen) use "Category" instead. Accept either so the
+    # classification isn't lost to the attributes sweep and defaulted to Other.
+    classification_raw = meta.get("Classification") or meta.get("Category")
+    classification = normalize_category(classification_raw)
     visual_summary = str(meta.get("Visual_Summary", "") or "").strip()
     keywords = normalize_keywords(meta.get("Search_Keywords"))
 
-    # Everything except the three handled fields becomes "attributes".
+    # Everything except the handled fields becomes "attributes".
     attrs = {
         k: v for k, v in meta.items()
-        if k not in ("Classification", "Visual_Summary", "Search_Keywords")
+        if k not in ("Classification", "Category", "Visual_Summary", "Search_Keywords")
     }
     flat = []
     flatten_for_search(attrs, flat)
@@ -282,10 +289,13 @@ CREATE INDEX IF NOT EXISTS idx_items_vendor_sku ON items(vendor, sku);
 CREATE INDEX IF NOT EXISTS idx_items_classification ON items(classification);
 """
 
+# metadata_model is NULL for markdown-imported rows (the model that generated
+# the old index files is unknown); scraper.py records it on every upsert.
 COLUMNS = [
     "filename", "vendor", "sku", "product_name", "classification",
     "description", "visual_summary", "search_keywords", "attributes_json",
     "attributes_text", "product_url", "thumbnail_path", "source_file",
+    "metadata_model",
 ]
 
 
