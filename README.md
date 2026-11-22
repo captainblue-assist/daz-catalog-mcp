@@ -60,7 +60,9 @@ Genesis 8 figures throughout for compatibility: **Sacrament/Mortis cathedral** �
 | SPEC.md | Full design spec + development phases |
 | import_catalog.py | Phase 1 - parses the markdown index, normalizes metadata, upserts into SQLite; includes a CLI search for validation |
 | mcp_server.py | Phase 2 - MCP server exposing the tools above |
+| scraper.py | Phase 3 - re-scrapes vendor pages + a local vision LLM and upserts refreshed metadata (idempotent, keyed on filename) |
 | config.example.json | Template config (copy to config.json) |
+| requirements.txt | Python dependencies (mcp, requests, beautifulsoup4, openai) |
 | catalog.db | Generated SQLite database (not committed) |
 
 ## Getting started
@@ -68,6 +70,8 @@ Genesis 8 figures throughout for compatibility: **Sacrament/Mortis cathedral** �
 2. Run the importer: `python import_catalog.py import`
 3. Validate search from the CLI: `python import_catalog.py search "bride wedding zombie" --category Clothes`
 4. Inspect one item (by id, filename, or SKU): `python import_catalog.py show 55815`
+
+> **Where are the thumbnails?** `thumbnail_dir` must point at a folder where each product's thumbnail sits directly, named by its catalog filename (e.g. `DAZ_3D_55815_The_Monster_Bride_HD....jpg`) — both the importer and scraper do a flat `<dir>/<filename>` lookup. In a DAZ 3D install these thumbnails live under your **`My DAZ 3D Library/Runtime/Support`** folder (nested by vendor/product), so you typically point at a flattened copy of them rather than that tree directly. On this server the flattened set is `C:/Users/Adam/Documents/AnythingLLM/Daz3d/Product-Thumbnails`; the live originals are under `C:\Users\Public\Documents\My DAZ 3D Library\Runtime\Support`.
 
 ## Registering the MCP server (Phase 2)
 `mcp_server.py` speaks MCP over stdio and reuses the importer's config/scoring code.
@@ -83,11 +87,41 @@ The server reads `config.json` from its own directory, so it works regardless of
 
 Tools: `search`, `get_item`, `list_categories`, `stats` (see SPEC.md §6).
 
+## Re-scraping with a vision model (Phase 3)
+
+`scraper.py` regenerates metadata for products by scraping each vendor page (description + gallery images), asking a local **vision LLM** (any OpenAI-compatible server, e.g. LM Studio at `http://localhost:1234/v1`) to classify and describe the product, then upserting the result into `catalog.db`. It is idempotent and keyed on filename, so re-running it — even with a better vision model later — updates rows in place without duplicating or losing data. Each row records which model wrote it (`metadata_model`).
+
+It reuses all normalization/upsert logic from `import_catalog.py`, so scraper-written rows are identical in shape to markdown-imported ones (including the `"Category"`/`"Classification"` alias handling).
+
+### Usage
+```bash
+# incremental: only process thumbnails not already in the DB (e.g. new purchases)
+python scraper.py --model <lm-studio-model-id>
+
+# reprocess everything with a better model (after upgrading your vision LLM)
+python scraper.py --force --model <better-model-id>
+
+# just these files
+python scraper.py --only DAZ_3D_55815_....jpg Renderotica_67091_....png
+
+# retry only the items that FAILED in a previous run (parses scraping_process.log)
+python scraper.py --retry-log scraping_process.log
+
+# stop after N items (test runs)
+python scraper.py --limit 5
+```
+
+- **Model / API:** pass `--model <id>` and/or `--url <base-url>`, or set `model_name` and `lm_studio_url` in `config.json`.
+- **Modes:** default is *incremental* (skip filenames already present); `--force` reprocesses all; `--only FILE…` targets specific files; `--retry-log PATH` retries a previous run's failures. Progress commits per item, so an interrupted run resumes cleanly.
+- **Logging:** writes to `scraping_process.log` (gitignored) and the console; on any failure it lists which items failed and how to retry them.
+
+> Note: re-running the markdown importer (`import_catalog.py import`) after a scraper run resets those rows' `metadata_model` back to NULL, since the model that wrote the original index files is unknown. Scrape again if you want provenance recorded.
+
 ## Status / phases
 - Phase 0 - Spec & decisions (done)
 - Phase 1 - Importer + SQLite DB, validate design (done)
 - Phase 2 - MCP server (done)
-- Phase 3 - Re-scrape integration (idempotent upsert, track metadata model)
+- Phase 3 - Re-scrape integration (idempotent upsert, track metadata model) (done)
 
 ## Notes
 - Only DAZ and Renderotica are supported for now.
