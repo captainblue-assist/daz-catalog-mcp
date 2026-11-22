@@ -24,10 +24,11 @@ Plus helpers: `list_categories`, `stats`.
 1. Copy `config.example.json` to `config.json` and fill in your local paths (`sources`, `thumbnail_dir`).
 2. Run the importer: `python import_catalog.py import`
 3. Validate search from the CLI: `python import_catalog.py search "bride wedding zombie" --category Clothes`
+4. Inspect one item (by id, filename, or SKU): `python import_catalog.py show 55815`
 
 ## Status / phases
 - Phase 0 - Spec & decisions (done)
-- Phase 1 - Importer + SQLite DB, validate design (next)
+- Phase 1 - Importer + SQLite DB, validate design (done)
 - Phase 2 - MCP server
 - Phase 3 - Re-scrape integration (idempotent upsert, track metadata model)
 
